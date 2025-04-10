@@ -1,4 +1,5 @@
-version: '3'
+version: '3.8'
+
 services:
   zookeeper:
     image: zookeeper:3.7
@@ -12,27 +13,24 @@ services:
   kafka:
     image: wurstmeister/kafka:latest
     environment:
-      KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka:9093,OUTSIDE://localhost:9092
-      KAFKA_LISTENERS: INSIDE://:9093,OUTSIDE://:9092
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka:9093,OUTSIDE://localhost:9094
+      KAFKA_LISTENERS: INSIDE://:9093,OUTSIDE://:9094
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
       KAFKA_LISTENER_HOSTNAME: kafka
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_HEAP_OPTS: "-Xmx256M -Xms128M"  # Limit Kafka JVM heap size
     ports:
       - "9093:9093"  # Internal Kafka port
-      - "9092:9092"  # External Kafka port
+      - "9094:9094"  # External Kafka port
     networks:
       - kafka-net
     depends_on:
       - zookeeper
-
-  producer:
-    build:
-      context: ./producer 
-    depends_on:
-      - kafka
-    networks:
-      - kafka-net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
   consumer:
     build:
@@ -41,6 +39,22 @@ services:
       - kafka
     networks:
       - kafka-net
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  producer:
+    build:
+      context: ./producer 
+    depends_on:
+      - consumer
+    networks:
+      - kafka-net
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
 networks:
   kafka-net:
